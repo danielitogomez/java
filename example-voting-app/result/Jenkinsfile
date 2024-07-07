@@ -1,0 +1,45 @@
+pipeline {
+    
+    agent any 
+
+    tools {
+        nodejs 'NodeJS 8.9.0' 
+    }
+    
+    stages {
+        stage('build') {
+            when {
+                changeset "**/result/**"
+            }
+            steps {
+                echo 'Compile result app'
+                dir('result'){
+                sh 'npm install'
+                }
+            }
+        }
+        stage('test') {
+           when {
+                changeset "**/result/**"
+            }
+            steps {
+                echo 'Running Unit Tests on result app'
+                dir('result'){
+                sh 'npm install'
+                sh 'npm test'
+                }
+            }
+        }  
+    }
+        post { 
+        always { 
+            echo 'Pipeline for result is complete...'
+        }
+        failure {
+           slackSend (channel: "testing-jenkins-cicd", color: '#FF0000', message: "FAILED: Job ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)")
+       }
+        success {
+           slackSend (channel: "testing-jenkins-cicd", color: '#00ff59', message: "SUCCESS: Job ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)")
+       }
+    }
+}

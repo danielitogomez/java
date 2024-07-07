@@ -1,0 +1,108 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS=credentials('dockerhub')
+	}
+
+    stages {
+
+        stage('Checkout SCM') {
+
+           options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
+
+            steps {
+                checkout scm
+            }
+        }
+
+        
+        stage('Build compile') {
+
+           options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+
+            steps {
+                sh 'echo compile test...'
+                sh './mvnw clean compile'
+            }
+        }
+        
+        stage('Build test') {
+
+           options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
+
+            steps {
+                sh 'echo build test...'
+                sh './mvnw test'  
+            }
+
+            post {
+                always {
+                    junit '**/target/surefire-reports/TEST-*.xml'
+                }
+            }
+        }       
+        
+        stage('Integration test') {
+
+           options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+
+            steps {
+                sh 'echo Integration test...'
+                sh './mvnw test -Dtest="AddControllerIntTest"'
+            }
+        }
+
+        stage('Build Image') {
+
+           options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+// To Do Fix to manage dinamically the image tag
+            steps {
+                sh 'echo building...'
+                sh 'docker build -t danielgomeza/java-rest-api-calculator:latest .'
+            }
+        }
+        
+        stage('Login to DockerHub') {
+
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
+
+			steps {
+                sh 'echo login...'
+				sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+			}
+		}
+        
+        stage('Push Image to DockerHub') {
+
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
+// To Do Fix to manage dinamically the image tag
+// To Do output the last version
+			steps {
+                sh 'echo pushing...'
+				sh 'docker push danielgomeza/java-rest-api-calculator:latest'
+			}
+		}
+
+    }
+    	post {
+		always {
+                sh 'echo logout'
+		        sh 'docker logout'
+		}
+	}
+}

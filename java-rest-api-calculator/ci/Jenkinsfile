@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+
+           options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+
+            steps {
+                git 'https://github.com/danielitogomez/java-rest-api-calculator'
+                sh './mvnw clean compile'
+            }
+        }
+        stage('Build test') {
+
+           options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
+
+            steps {
+                sh './mvnw test'  
+             //   sh './mvnw clean package'
+            }
+
+            post {
+                always {
+                    junit '**/target/surefire-reports/TEST-*.xml'
+                }
+            }
+        }       
+        stage('Integration test') {
+
+           options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+
+            steps {
+                sh './mvnw test -Dtest="AddControllerIntTest"'
+            }
+        }
+    }
+}
